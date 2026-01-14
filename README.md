@@ -1,56 +1,13 @@
-# AzureInfra
+# AzureDemo
 
-Terraform repo for Azure with a bootstrap stack for state storage and the main infrastructure in `Dev`.
+Demo infrastructure repo for Azure. It shows how Terraform is structured with a bootstrap layer and a main stack, plus a simple CI/CD workflow for `fmt/init/validate/plan` and a Trivy scan (apply is manual).
 
 ## Structure
-- `Dev/bootstrap` - creates the resource group, storage account, and `tfstate` container for the backend.
-- `Dev` - main infrastructure, uses the Blob Storage backend.
+- `Dev/bootstrap` - creates a resource group, a storage account, and a Blob container for Terraform state.
+- `Dev` - main infrastructure (ACR) that uses the state backend.
+- `.github/workflows/demo.yml` - example CI/CD pipeline.
 
-## Requirements
-- `terraform`
-- `az` (Azure CLI)
-- Access to an Azure subscription
-
-## 1) Bootstrap (first)
-Bootstrap must be applied first, because the backend has to exist before Terraform in `Dev` can initialize.
-
-Steps:
-```bash
-cd Dev/bootstrap
-terraform init
-terraform apply
-```
-
-After this you should have:
-- Resource group
-- Storage account
-- `tfstate` container
-
-## 2) Main infrastructure (second)
-In `Dev`, add the `azurerm` backend (e.g. `Dev/backend.tf`):
-```hcl
-terraform {
-  backend "azurerm" {
-    resource_group_name  = "fcb_alz_resource-group"
-    storage_account_name = "stgr101"
-    container_name       = "tfstate"
-    key                  = "dev.terraform.tfstate"
-  }
-}
-```
-
-Note: you cannot use `var.*` inside the `backend` block. If you want to parameterize it, use:
-```bash
-terraform init -backend-config=...
-```
-
-Then:
-```bash
-cd Dev
-terraform init -migrate-state
-terraform plan
-```
-
-After migration, the state file should be visible in the `tfstate` container in Azure Portal.
-# AzureDemo
-# AzureDemo
+## Flow
+1) Bootstrap creates the storage account + container for state.  
+2) Main stack creates the ACR.  
+3) CI runs `fmt/init/validate/plan` and a Trivy scan; `apply` is triggered manually.
